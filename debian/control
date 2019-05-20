@@ -1,0 +1,11 @@
+Source: clicktail
+Section: misc
+Priority: extra
+Maintainer: Dmitry Pushkin <dspushkin@yandex-team.ru>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.2
+
+Package: clicktail
+Architecture: all
+Description: clicktail for slow query logs
+ clicktail for slow query logs

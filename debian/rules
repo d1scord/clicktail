@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+
+export DH_ALWAYS_EXCLUDE=.svn
+export DH_VERBOSE=1
+
+DEBVERS := $(shell dpkg-parsechangelog | sed -n -e 's/^Version: //p')
+
+binary:
+	env GOPATH= ./debian/build.sh
+	echo clicktail_$(DEBVERS)_all.deb misc extra > debian/files
+	dpkg-buildpackage -d -Rdh -us -uc -b
+
+%:
+	dh $@
+
+override_dh_usrlocal:
+	true
