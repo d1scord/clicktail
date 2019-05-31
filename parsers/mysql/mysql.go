@@ -103,6 +103,11 @@ const (
 	readOnlyKey   = "read_only"
 	replicaLagKey = "replica_lag"
 	roleKey       = "role"
+
+	// Custom comments attributes
+	requestIdKey  = "reqid"
+	methodKey     = "method"
+	serviceKey    = "service"
 )
 
 var (
@@ -134,6 +139,7 @@ var (
 	reMySQLVersion       = parsers.ExtRegexp{regexp.MustCompile("/.*, Version: .* .*MySQL Community Server.*")}
 	reMySQLPortSock      = parsers.ExtRegexp{regexp.MustCompile("Tcp port:.* Unix socket:.*")}
 	reMySQLColumnHeaders = parsers.ExtRegexp{regexp.MustCompile("Time.*Id.*Command.*Argument.*")}
+	reQueryRequestId     = parsers.ExtRegexp{regexp.MustCompile("reqid:(?P<reqid>[0-9]+):?(?P<service>[\\w.]+)?:?(?P<method>[\\w.]+)?")}
 )
 
 const timeFormat = "2006-01-02T15:04:05.000000"
@@ -535,8 +541,8 @@ func (p *Parser) handleEvent(ptp *perThreadParser, rawE []string) (
 		} else if _, mg := reInnodbTrx.FindStringSubmatchMap(line); mg != nil {
 			sq[transactionIDKey] = mg["trxId"]
 		} else if _, mg := reSlowLogRates.FindStringSubmatchMap(line); mg != nil {
-        	sq[slRateTypeKey] = mg["sl_rate_type"]
-        	sq[slRateLimitKey] = mg["sl_rate_limit"]
+			sq[slRateTypeKey] = mg["sl_rate_type"]
+			sq[slRateLimitKey] = mg["sl_rate_limit"]
 		} else if match := reUse.FindString(line); match != "" {
 			query = ""
 			db := strings.TrimPrefix(line, match)
@@ -564,6 +570,14 @@ func (p *Parser) handleEvent(ptp *perThreadParser, rawE []string) (
 				}
 				if len(ptp.normalizer.LastComments) > 0 {
 					sq[commentsKey] = "/* " + strings.Join(ptp.normalizer.LastComments, " */ /* ") + " */"
+				}
+				/* reqid:811502943172:name.script:method.script */
+				if _, mg := reQueryRequestId.FindStringSubmatchMap(fmt.Sprintf("%s", sq[commentsKey])); mg != nil {
+					if reqid, err := strconv.Atoi(mg["reqid"]); err == nil {
+						sq[requestIdKey] = reqid
+					}
+					sq[serviceKey] = mg["service"]
+					sq[methodKey]  = mg["method"]
 				}
 				sq[statementKey] = ptp.normalizer.LastStatement
 				query = ""
